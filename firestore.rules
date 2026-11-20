@@ -1,0 +1,276 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 0: Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global hardened helper primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidCategory(cat) {
+      return cat in ['SPORTS', 'POLITICS', 'EDUCATION', 'TECHNOLOGY'];
+    }
+
+    function isValidScope(scope) {
+      return scope in ['LOCAL', 'INTERNATIONAL'];
+    }
+
+    function isValidBriefingDepth(depth) {
+      return depth in ['FLASH', 'COMPACT', 'DEEP'];
+    }
+
+    function isValidVote(vote) {
+      return vote in ['UP', 'DOWN', 'NONE'];
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    // Validation Helper: UserPreferences
+    function isValidUserPreferences(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId.size() <= 128 &&
+             data.selectedCategories is list &&
+             data.selectedCategories.size() >= 1 &&
+             data.selectedCategories.size() <= 4 &&
+             data.selectedCategories.hasOnly(['SPORTS', 'POLITICS', 'EDUCATION', 'TECHNOLOGY']) &&
+             data.localLocation is string &&
+             data.localLocation.size() >= 1 &&
+             data.localLocation.size() <= 120 &&
+             data.localLat is number &&
+             data.localLat >= -90 &&
+             data.localLat <= 90 &&
+             data.localLng is number &&
+             data.localLng >= -180 &&
+             data.localLng <= 180 &&
+             data.internationalRegions is list &&
+             data.internationalRegions.size() <= 10 &&
+             (data.internationalRegions.size() == 0 || data.internationalRegions[0] is string) &&
+             data.customLocations is list &&
+             data.customLocations.size() <= 10 &&
+             (data.customLocations.size() == 0 || data.customLocations[0] is string) &&
+             data.prioritizeLocal is bool &&
+             data.briefingDepth is string &&
+             data.briefingDepth.size() <= 20 &&
+             isValidBriefingDepth(data.briefingDepth);
+    }
+
+    // Validation Helper: BookmarkedArticle
+    function isValidBookmarkedArticle(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId.size() <= 128 &&
+             data.articleKey is string &&
+             data.articleKey.size() >= 1 &&
+             data.articleKey.size() <= 128 &&
+             data.headline is string &&
+             data.headline.size() >= 1 &&
+             data.headline.size() <= 300 &&
+             data.compactSummary is string &&
+             data.compactSummary.size() >= 1 &&
+             data.compactSummary.size() <= 2000 &&
+             data.keyPoints is list &&
+             data.keyPoints.size() <= 8 &&
+             (data.keyPoints.size() == 0 || data.keyPoints[0] is string) &&
+             data.category is string &&
+             data.category.size() <= 30 &&
+             isValidCategory(data.category) &&
+             data.scope is string &&
+             data.scope.size() <= 30 &&
+             isValidScope(data.scope) &&
+             data.locationName is string &&
+             data.locationName.size() >= 1 &&
+             data.locationName.size() <= 150 &&
+             data.latitude is number &&
+             data.latitude >= -90 &&
+             data.latitude <= 90 &&
+             data.longitude is number &&
+             data.longitude >= -180 &&
+             data.longitude <= 180 &&
+             data.sourceName is string &&
+             data.sourceName.size() >= 1 &&
+             data.sourceName.size() <= 120 &&
+             data.sourceUrl is string &&
+             data.sourceUrl.size() <= 1000 &&
+             data.mapsPlaceNote is string &&
+             data.mapsPlaceNote.size() <= 500 &&
+             data.publishedLabel is string &&
+             data.publishedLabel.size() <= 80 &&
+             data.readTimeMinutes is int &&
+             data.readTimeMinutes >= 1 &&
+             data.readTimeMinutes <= 30 &&
+             data.offlineReady is bool;
+    }
+
+    // Validation Helper: ArticleFeedback
+    function isValidArticleFeedback(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId.size() <= 128 &&
+             data.articleKey is string &&
+             data.articleKey.size() >= 1 &&
+             data.articleKey.size() <= 128 &&
+             data.articleHeadline is string &&
+             data.articleHeadline.size() >= 1 &&
+             data.articleHeadline.size() <= 300 &&
+             data.category is string &&
+             data.category.size() <= 30 &&
+             isValidCategory(data.category) &&
+             data.helpfulVote is string &&
+             data.helpfulVote.size() <= 10 &&
+             isValidVote(data.helpfulVote) &&
+             data.accuracyRating is int &&
+             data.accuracyRating >= 1 &&
+             data.accuracyRating <= 5 &&
+             data.helpfulnessRating is int &&
+             data.helpfulnessRating >= 1 &&
+             data.helpfulnessRating <= 5 &&
+             data.inaccuracyReport is string &&
+             data.inaccuracyReport.size() <= 1000 &&
+             data.improvementSuggestion is string &&
+             data.improvementSuggestion.size() <= 1000;
+    }
+
+    // 1. User Preferences subcollection
+    match /users/{userId}/preferences/{prefId} {
+      allow get: if isOwner(userId) && isValidId(prefId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(prefId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'selectedCategories', 'localLocation',
+                         'localLat', 'localLng', 'internationalRegions',
+                         'customLocations', 'prioritizeLocal', 'briefingDepth',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'selectedCategories', 'localLocation',
+                         'localLat', 'localLng', 'internationalRegions',
+                         'customLocations', 'prioritizeLocal', 'briefingDepth',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidUserPreferences(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(prefId) &&
+                       isValidUserPreferences(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'selectedCategories', 'localLocation', 'localLat', 'localLng',
+                         'internationalRegions', 'customLocations', 'prioritizeLocal',
+                         'briefingDepth', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(prefId);
+    }
+
+    // 2. Bookmarked Articles subcollection (offline-cached + cloud-synced)
+    match /users/{userId}/bookmarks/{bookmarkId} {
+      allow get: if isOwner(userId) && isValidId(bookmarkId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(bookmarkId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'articleKey', 'headline', 'compactSummary',
+                         'keyPoints', 'category', 'scope', 'locationName',
+                         'latitude', 'longitude', 'sourceName', 'sourceUrl',
+                         'mapsPlaceNote', 'publishedLabel', 'readTimeMinutes',
+                         'offlineReady', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'articleKey', 'headline', 'compactSummary',
+                         'keyPoints', 'category', 'scope', 'locationName',
+                         'latitude', 'longitude', 'sourceName', 'sourceUrl',
+                         'mapsPlaceNote', 'publishedLabel', 'readTimeMinutes',
+                         'offlineReady', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidBookmarkedArticle(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(bookmarkId) &&
+                       isValidBookmarkedArticle(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().articleKey == existing().articleKey &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'headline', 'compactSummary', 'keyPoints', 'category',
+                         'scope', 'locationName', 'latitude', 'longitude',
+                         'sourceName', 'sourceUrl', 'mapsPlaceNote',
+                         'publishedLabel', 'readTimeMinutes', 'offlineReady', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(bookmarkId);
+    }
+
+    // 3. Article Summary Feedback subcollection
+    match /users/{userId}/feedback/{feedbackId} {
+      allow get: if isOwner(userId) && isValidId(feedbackId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(feedbackId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'articleKey', 'articleHeadline', 'category',
+                         'helpfulVote', 'accuracyRating', 'helpfulnessRating',
+                         'inaccuracyReport', 'improvementSuggestion',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'articleKey', 'articleHeadline', 'category',
+                         'helpfulVote', 'accuracyRating', 'helpfulnessRating',
+                         'inaccuracyReport', 'improvementSuggestion',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidArticleFeedback(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(feedbackId) &&
+                       isValidArticleFeedback(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().articleKey == existing().articleKey &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'articleHeadline', 'category', 'helpfulVote',
+                         'accuracyRating', 'helpfulnessRating',
+                         'inaccuracyReport', 'improvementSuggestion', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(feedbackId);
+    }
+  }
+}

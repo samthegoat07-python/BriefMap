@@ -1,0 +1,6 @@
+{
+  "name": "BriefMap",
+  "description": "Compact daily news and current affairs briefings powered by Gemini intelligence, featuring interactive location maps, audio TTS briefings, personalized categories and regions, offline-capable bookmarks, and summary feedback.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

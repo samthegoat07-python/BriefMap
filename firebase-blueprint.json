@@ -1,0 +1,262 @@
+{
+  "entities": {
+    "UserPreferences": {
+      "title": "UserPreferences",
+      "description": "Personalized news categories, geographic focus locations, and summary briefing preferences for a user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "selectedCategories": {
+          "type": "array",
+          "description": "Prioritized news categories (SPORTS, POLITICS, EDUCATION, TECHNOLOGY)."
+        },
+        "localLocation": {
+          "type": "string",
+          "description": "Primary local city or region for local news briefings."
+        },
+        "localLat": {
+          "type": "number",
+          "description": "Latitude of user's primary local location."
+        },
+        "localLng": {
+          "type": "number",
+          "description": "Longitude of user's primary local location."
+        },
+        "internationalRegions": {
+          "type": "array",
+          "description": "Selected international regions of interest."
+        },
+        "customLocations": {
+          "type": "array",
+          "description": "Specific custom cities or countries tracked by the user."
+        },
+        "prioritizeLocal": {
+          "type": "boolean",
+          "description": "Whether local stories are ranked ahead of international stories."
+        },
+        "briefingDepth": {
+          "type": "string",
+          "enum": ["FLASH", "COMPACT", "DEEP"],
+          "description": "Preferred Gemini summary length for on-the-go reading."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() on creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() on creation and update."
+        }
+      },
+      "required": [
+        "userId",
+        "selectedCategories",
+        "localLocation",
+        "localLat",
+        "localLng",
+        "internationalRegions",
+        "customLocations",
+        "prioritizeLocal",
+        "briefingDepth",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "BookmarkedArticle": {
+      "title": "BookmarkedArticle",
+      "description": "Saved news summary retained with full compact content, map coordinates, and original source link for offline and later reading.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "articleKey": {
+          "type": "string",
+          "description": "Stable identifier for the summarized article."
+        },
+        "headline": {
+          "type": "string",
+          "description": "Concise editorial headline."
+        },
+        "compactSummary": {
+          "type": "string",
+          "description": "Gemini-generated compact summary for on-the-go reading."
+        },
+        "keyPoints": {
+          "type": "array",
+          "description": "Bulleted key takeaways from the story."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["SPORTS", "POLITICS", "EDUCATION", "TECHNOLOGY"],
+          "description": "Primary news category."
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["LOCAL", "INTERNATIONAL"],
+          "description": "Geographic scope of the story."
+        },
+        "locationName": {
+          "type": "string",
+          "description": "Geographic city, landmark, or region where the story takes place."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Story latitude coordinate for map pinning."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Story longitude coordinate for map pinning."
+        },
+        "sourceName": {
+          "type": "string",
+          "description": "Original publisher or news organization name."
+        },
+        "sourceUrl": {
+          "type": "string",
+          "description": "Original source web link."
+        },
+        "mapsPlaceNote": {
+          "type": "string",
+          "description": "Location context grounded via Google Maps."
+        },
+        "publishedLabel": {
+          "type": "string",
+          "description": "Human-readable publication recency label."
+        },
+        "readTimeMinutes": {
+          "type": "integer",
+          "description": "Estimated reading time in minutes."
+        },
+        "offlineReady": {
+          "type": "boolean",
+          "description": "Indicates the summary payload is cached for offline reading."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() when bookmarked."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() on update."
+        }
+      },
+      "required": [
+        "userId",
+        "articleKey",
+        "headline",
+        "compactSummary",
+        "keyPoints",
+        "category",
+        "scope",
+        "locationName",
+        "latitude",
+        "longitude",
+        "sourceName",
+        "sourceUrl",
+        "mapsPlaceNote",
+        "publishedLabel",
+        "readTimeMinutes",
+        "offlineReady",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ArticleFeedback": {
+      "title": "ArticleFeedback",
+      "description": "User accuracy and helpfulness ratings, thumbs vote, inaccuracy reports, and improvement suggestions collected to refine Gemini summarization.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "articleKey": {
+          "type": "string",
+          "description": "Stable identifier of the rated article."
+        },
+        "articleHeadline": {
+          "type": "string",
+          "description": "Headline of the rated article."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["SPORTS", "POLITICS", "EDUCATION", "TECHNOLOGY"],
+          "description": "Category of the rated article."
+        },
+        "helpfulVote": {
+          "type": "string",
+          "enum": ["UP", "DOWN", "NONE"],
+          "description": "Quick thumbs up/down vote on the summary."
+        },
+        "accuracyRating": {
+          "type": "integer",
+          "description": "1 to 5 star rating for factual accuracy."
+        },
+        "helpfulnessRating": {
+          "type": "integer",
+          "description": "1 to 5 star rating for summary helpfulness and clarity."
+        },
+        "inaccuracyReport": {
+          "type": "string",
+          "description": "Optional report detailing factual inaccuracies."
+        },
+        "improvementSuggestion": {
+          "type": "string",
+          "description": "Optional suggestion to improve Gemini summarization style or focus."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() when submitted."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() when updated."
+        }
+      },
+      "required": [
+        "userId",
+        "articleKey",
+        "articleHeadline",
+        "category",
+        "helpfulVote",
+        "accuracyRating",
+        "helpfulnessRating",
+        "inaccuracyReport",
+        "improvementSuggestion",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/preferences/{prefId}": {
+      "schema": {
+        "$ref": "#/entities/UserPreferences"
+      },
+      "description": "Per-user news personalization preferences (categories, local and international locations, briefing depth)."
+    },
+    "/users/{userId}/bookmarks/{bookmarkId}": {
+      "schema": {
+        "$ref": "#/entities/BookmarkedArticle"
+      },
+      "description": "Per-user saved news articles cached for offline access with summaries and original source URLs."
+    },
+    "/users/{userId}/feedback/{feedbackId}": {
+      "schema": {
+        "$ref": "#/entities/ArticleFeedback"
+      },
+      "description": "Per-user accuracy and helpfulness ratings and refinement suggestions used to guide Gemini summarization."
+    }
+  }
+}
